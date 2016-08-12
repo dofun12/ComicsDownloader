@@ -6,6 +6,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -20,19 +24,64 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-public class Start {
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+public class Mapper {
 	private static String rootFolderPath = "/home/kevim/HQandMangas/";
 	private static String folderPath = "/home/kevim/HQandMangas/the-walking-dead-hqs";
+	private Map<String,String> links;
 	
-	public Start() {
+	public Mapper() {
 		ExecutorService executor = Executors.newCachedThreadPool();
-		
-		for(int i=154;i<=157;i++){
+		links =  new TreeMap<String,String>();
+		for(int i=100;i<=157;i++){
 			executor.execute(new Queue(i));
 		}
 		executor.shutdown();
+		while(!executor.isTerminated()){}
+		
+		ObjectMapper mapper = new ObjectMapper();
+		ArrayNode arrayLinks = mapper.createArrayNode();
+		
+		Map<String,String> uniqueCaps = new LinkedHashMap<String,String>();
+		for(String key:links.keySet()){
+			uniqueCaps.put(key.split(":")[0], key.split(":")[0]);
+		}	
+		
+		for(String key:uniqueCaps.keySet()){
+			ObjectNode capNode = mapper.createObjectNode();
+			ArrayNode urls = mapper.createArrayNode();
+			capNode.put("capitulo", key);
+			int index =0;
+			while(links.get(key+":"+getFormatedIndex(index))!=null){
+				System.out.println("Getting: "+(key+":"+getFormatedIndex(index)));
+				ObjectNode epNode = mapper.createObjectNode();
+				epNode.put("episodio", getFormatedIndex(index));
+				epNode.put("url", links.get(key+":"+getFormatedIndex(index)));
+				urls.add(epNode);
+				index++;
+			}
+			capNode.set("urls", urls);
+			arrayLinks.add(capNode);
+		}
+		System.out.println(arrayLinks);
+		try {
+			mapper.writeValue(new File("links.json"), arrayLinks);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
+	public String getFormatedIndex(int index){
+		String imgIndex = String.valueOf(index+1); 
+		if(imgIndex.toCharArray().length<2){
+			imgIndex = "0"+imgIndex;
+		}
+		return imgIndex;
+	}
+
 	public class Queue implements Runnable{
 		int cap;
 		
@@ -43,52 +92,45 @@ public class Start {
 		@Override
 		public void run() {
 			HttpClient client = HttpClientBuilder.create().build();
-			System.out.println("Starting download cap: "+cap);
-			downloadCapitulo(cap,client);
+			//System.out.println("Starting download cap: "+cap);
+			mapCapitulo(cap,client);
 		}
 		
 	}
 
-	public void downloadCapitulo(Integer capitulo,HttpClient client){
+	public void mapCapitulo(Integer capitulo,HttpClient client){
 		//http://centraldosquadrinhos.com/wp-content/manga/Quadrinhos/thewalkingdead/edicao0134/www.thewalkingdead-online.com-003.jpg
 		//String defaultImagemRepoLink = "http://www.maxmangas.com.br/wp-content/manga/1/"+capitulo+"/";
 		String defaultImagemRepoLink = "http://centraldosquadrinhos.com/wp-content/manga/Quadrinhos/thewalkingdead/edicao0"+capitulo+"/";
 		
 		try{
-			File rootFolder = new File(rootFolderPath);
-			if(!rootFolder.exists()){
-				rootFolder.mkdirs();
-			}
-			File destination = new File(folderPath);
-			if(!destination.exists()){
-				destination.mkdir();
-			}
-			File capDir = new File(folderPath+capitulo);
-			if(!capDir.exists()){
-				capDir.mkdir();
-			}
 			
 			String html = getInfos(client,defaultImagemRepoLink);
 			Document doc = Jsoup.parse(html);
 			Elements elements = doc.getElementsByTag("li");
+			int totalFiles = 0;
+			int imageIndex = 0;
 			for(Element e:elements){
 				if(e.text().contains(".jpg")){
 					String image = e.text();
-					String destinationFile = capDir.getPath()+"/"+image; 
-					if(!new File(destinationFile).exists()){
-						String url = defaultImagemRepoLink+image;
-						url=url.replace(" ","%20");
-						HttpGet get = new HttpGet(url);
-						get.setHeader("User-Agent", " Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:36.0) Gecko/20100101 Firefox/36.0");
-						get.setHeader("Cookie", "__cfduid=da015e4ef87311ec5b9b85383c504587f1424188606; popup_user_login=yes");
-						HttpResponse response = client.execute(get);
-						System.out.print("Searching : " +url+"\n");
-						System.out.print("Response Code : " +response.getStatusLine().getStatusCode()+"\n");
-						download(response.getEntity(),destinationFile);
-					}else{
-						System.out.println("Skipping: "+destinationFile);
-					}
+					//String destinationFile = capDir.getPath()+"/"+image; 
+					String url = defaultImagemRepoLink+image;
+					url=url.replace(" ","%20");
+					//HttpGet get = new HttpGet(url);
+					//get.setHeader("User-Agent", " Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:36.0) Gecko/20100101 Firefox/36.0");
+					//get.setHeader("Cookie", "__cfduid=da015e4ef87311ec5b9b85383c504587f1424188606; popup_user_login=yes");
+					//HttpResponse response = client.execute(get);
+					//System.out.print("Searching : " +url+"\n");
+					//System.out.print("Response Code : " +response.getStatusLine().getStatusCode()+"\n");
+					//if(response.getStatusLine().getStatusCode()==200){
+						//System.out.println(capitulo+", url: "+url);
+					//}
+					//download(response.getEntity(),destinationFile);
+						
 					
+					links.put(capitulo+":"+getFormatedIndex(imageIndex), url);
+					totalFiles++;
+					imageIndex++;
 				}
 			}
 		}catch(Exception e){
@@ -115,7 +157,7 @@ public class Start {
 	}
 	
 	public static void main(String[] args) {
-		new Start();
+		new Mapper();
 
 	}
 
