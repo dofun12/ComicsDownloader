@@ -29,6 +29,9 @@ import org.jsoup.select.Elements;
 import org.lemanoman.http.Download;
 
 public class Start {
+	private static String rootFolderPath = "/home/kevim/HQandMangas/";
+	private static String folderPath = "/home/kevim/HQandMangas/the-walking-dead-hqs";
+	
 	public Start() {
 		ExecutorService executor = Executors.newCachedThreadPool();
 		
@@ -60,15 +63,15 @@ public class Start {
 		String defaultImagemRepoLink = "http://centraldosquadrinhos.com/wp-content/manga/Quadrinhos/thewalkingdead/edicao0"+capitulo+"/";
 		
 		try{
-			File rootFolder = new File("/home/kevim/HQandMangas/");
+			File rootFolder = new File(rootFolderPath);
 			if(!rootFolder.exists()){
 				rootFolder.mkdirs();
 			}
-			File destination = new File("/home/kevim/HQandMangas/the-walking-dead-hqs/");
+			File destination = new File(folderPath);
 			if(!destination.exists()){
 				destination.mkdir();
 			}
-			File capDir = new File("/home/kevim/HQandMangas/the-walking-dead-hqs/"+capitulo);
+			File capDir = new File(folderPath+capitulo);
 			if(!capDir.exists()){
 				capDir.mkdir();
 			}
