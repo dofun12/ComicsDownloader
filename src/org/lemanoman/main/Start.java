@@ -12,6 +12,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -28,11 +30,28 @@ import org.lemanoman.http.Download;
 
 public class Start {
 	public Start() {
-		for(int i=144;i<=145;i++){
-			HttpClient client = HttpClientBuilder.create().build();
-			System.out.println("Starting download cap: "+i);
-			downloadCapitulo(i,client);
+		ExecutorService executor = Executors.newCachedThreadPool();
+		
+		for(int i=154;i<=157;i++){
+			executor.execute(new Queue(i));
 		}
+		executor.shutdown();
+	}
+	
+	public class Queue implements Runnable{
+		int cap;
+		
+		public Queue(int cap) {
+			this.cap = cap;
+		}
+		
+		@Override
+		public void run() {
+			HttpClient client = HttpClientBuilder.create().build();
+			System.out.println("Starting download cap: "+cap);
+			downloadCapitulo(cap,client);
+		}
+		
 	}
 
 	public void downloadCapitulo(Integer capitulo,HttpClient client){
@@ -41,6 +60,10 @@ public class Start {
 		String defaultImagemRepoLink = "http://centraldosquadrinhos.com/wp-content/manga/Quadrinhos/thewalkingdead/edicao0"+capitulo+"/";
 		
 		try{
+			File rootFolder = new File("/home/kevim/HQandMangas/");
+			if(!rootFolder.exists()){
+				rootFolder.mkdirs();
+			}
 			File destination = new File("/home/kevim/HQandMangas/the-walking-dead-hqs/");
 			if(!destination.exists()){
 				destination.mkdir();
