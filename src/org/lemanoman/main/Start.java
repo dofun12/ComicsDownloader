@@ -27,7 +27,7 @@ public class Start {
 	public Start() {
 		ExecutorService executor = Executors.newCachedThreadPool();
 		
-		for(int i=154;i<=157;i++){
+		for(int i=144;i<=163;i++){
 			executor.execute(new Queue(i));
 		}
 		executor.shutdown();
